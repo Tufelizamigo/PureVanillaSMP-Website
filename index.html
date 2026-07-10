@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Pure Vanilla SMP</title>
+<meta name="description" content="A pure vanilla Minecraft SMP. No resets, no mods, no pay-to-win. Java and Bedrock welcome.">
+<style>
+  /* ---------- Design tokens ----------
+     Palette: "aged parchment & deep pine" — vanilla = pure, warm, untouched.
+       --cream   #F2E9D8  paper / primary text on dark
+       --pine    #12231C  deep survival-night green (bg)
+       --pine2   #1B3229  raised panels
+       --moss    #6FBF73  living green accent (online / grass)
+       --gold    #E6B450  torchlight accent (headings / CTA)
+       --clay    #C8724B  warning / offline
+     Type: Fraunces (display, characterful serif) + Space Grotesk (UI/body) + JetBrains Mono (data/IP)
+  */
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,900&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap');
+
+  :root{
+    --cream:#F2E9D8; --pine:#12231C; --pine2:#1B3229; --pine3:#0C1813;
+    --moss:#6FBF73; --gold:#E6B450; --clay:#C8724B;
+    --line:rgba(242,233,216,.14);
+    --shadow:0 24px 60px -20px rgba(0,0,0,.7);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--pine);
+    color:var(--cream);
+    font-family:'Space Grotesk',system-ui,sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  ::selection{background:var(--gold);color:var(--pine3)}
+  a{color:inherit}
+
+  /* subtle voxel grid backdrop */
+  body::before{
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:
+      linear-gradient(var(--line) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:44px 44px;
+    -webkit-mask-image:radial-gradient(ellipse 90% 60% at 50% 0%,#000 30%,transparent 78%);
+            mask-image:radial-gradient(ellipse 90% 60% at 50% 0%,#000 30%,transparent 78%);
+    opacity:.5;
+  }
+
+  .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 24px}
+
+  /* ---------- Nav ---------- */
+  nav{
+    position:sticky;top:0;z-index:20;
+    backdrop-filter:blur(10px);
+    background:rgba(18,35,28,.72);
+    border-bottom:1px solid var(--line);
+  }
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .brand{display:flex;align-items:center;gap:11px;font-family:'Fraunces',serif;font-weight:900;font-size:1.15rem;letter-spacing:.2px}
+  .brand .cube{width:22px;height:22px;border-radius:4px;background:
+      conic-gradient(from 210deg,var(--moss) 0 33%,#4e9a58 0 66%,#3d7a46 0 100%);
+      box-shadow:0 0 0 1px rgba(0,0,0,.3) inset}
+  .navlinks{display:flex;gap:26px;font-size:.9rem;font-weight:500}
+  .navlinks a{color:rgba(242,233,216,.72);text-decoration:none;transition:color .18s}
+  .navlinks a:hover{color:var(--gold)}
+  @media(max-width:620px){.navlinks{display:none}}
+
+  /* ---------- Hero ---------- */
+  header{padding:76px 0 48px;text-align:center}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:700;
+    letter-spacing:.28em;text-transform:uppercase;color:var(--gold);
+    padding:7px 14px;border:1px solid var(--line);border-radius:100px;margin-bottom:26px;
+  }
+  .eyebrow .tick{width:6px;height:6px;border-radius:50%;background:var(--gold)}
+  h1{
+    font-family:'Fraunces',serif;font-weight:900;
+    font-size:clamp(2.9rem,8vw,5.6rem);line-height:.95;letter-spacing:-.02em;
+    margin-bottom:22px;
+  }
+  h1 .ital{font-style:italic;color:var(--gold);font-weight:600}
+  .lede{max-width:540px;margin:0 auto 38px;font-size:clamp(1.02rem,2.4vw,1.2rem);color:rgba(242,233,216,.78)}
+
+  /* IP join card */
+  .join{
+    display:inline-flex;flex-direction:column;gap:0;
+    background:var(--pine2);border:1px solid var(--line);border-radius:16px;
+    box-shadow:var(--shadow);overflow:hidden;width:min(440px,100%);
+  }
+  .join-row{display:flex;align-items:stretch}
+  .join-ip{
+    flex:1;display:flex;flex-direction:column;justify-content:center;
+    padding:16px 20px;text-align:left;gap:2px;min-width:0;
+  }
+  .join-ip .lbl{font-family:'JetBrains Mono',monospace;font-size:.64rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(242,233,216,.5)}
+  .join-ip .ip{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.18rem;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .copybtn{
+    border:none;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:.92rem;
+    background:var(--gold);color:var(--pine3);padding:0 26px;transition:background .18s,transform .05s;
+    display:flex;align-items:center;gap:8px;
+  }
+  .copybtn:hover{background:#f0c25f}
+  .copybtn:active{transform:scale(.97)}
+  .copybtn.done{background:var(--moss)}
+  .join-foot{
+    border-top:1px solid var(--line);padding:11px 20px;
+    display:flex;align-items:center;gap:16px;font-size:.8rem;color:rgba(242,233,216,.62);
+    flex-wrap:wrap;text-align:left;
+  }
+  .badge{display:inline-flex;align-items:center;gap:6px;font-weight:500}
+  .badge svg{width:15px;height:15px;opacity:.85}
+
+  /* ---------- Live status strip ---------- */
+  .status{
+    margin:56px auto 0;max-width:760px;
+    display:grid;grid-template-columns:repeat(3,1fr);gap:14px;
+  }
+  @media(max-width:560px){.status{grid-template-columns:1fr;max-width:340px}}
+  .stat{
+    background:var(--pine2);border:1px solid var(--line);border-radius:14px;
+    padding:20px 22px;text-align:left;position:relative;overflow:hidden;
+  }
+  .stat .k{font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(242,233,216,.5);margin-bottom:8px}
+  .stat .v{font-family:'Fraunces',serif;font-weight:900;font-size:2rem;line-height:1;color:var(--cream)}
+  .stat .v small{font-size:1rem;color:rgba(242,233,216,.55);font-weight:600}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:7px;vertical-align:middle}
+  .dot.on{background:var(--moss);box-shadow:0 0 0 0 var(--moss);animation:pulse 2s infinite}
+  .dot.off{background:var(--clay)}
+  .dot.load{background:var(--gold);animation:pulse 1.2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(111,191,115,.5)}70%{box-shadow:0 0 0 8px rgba(111,191,115,0)}100%{box-shadow:0 0 0 0 rgba(111,191,115,0)}}
+
+  /* ---------- Section scaffolding ---------- */
+  section{padding:72px 0;position:relative}
+  .sec-head{display:flex;align-items:baseline;gap:16px;margin-bottom:34px}
+  .sec-head .no{font-family:'JetBrains Mono',monospace;font-size:.8rem;font-weight:700;color:var(--gold);letter-spacing:.1em}
+  .sec-head h2{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(1.8rem,4.5vw,2.7rem);letter-spacing:-.01em}
+  .divider{height:1px;background:var(--line);margin:0}
+
+  /* Join steps */
+  .steps{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:680px){.steps{grid-template-columns:1fr}}
+  .step{
+    background:var(--pine2);border:1px solid var(--line);border-radius:16px;padding:26px 26px 28px;
+  }
+  .step h3{font-family:'Fraunces',serif;font-weight:600;font-size:1.3rem;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+  .step h3 .pill{font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:700;letter-spacing:.15em;padding:4px 9px;border-radius:6px;background:var(--pine3);color:var(--moss);border:1px solid var(--line)}
+  .step h3 .pill.b{color:var(--gold)}
+  .step p{color:rgba(242,233,216,.72);font-size:.94rem;margin-bottom:14px}
+  .step ol{list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:9px}
+  .step ol li{counter-increment:s;padding-left:32px;position:relative;font-size:.92rem;color:rgba(242,233,216,.82)}
+  .step ol li::before{content:counter(s);position:absolute;left:0;top:0;width:22px;height:22px;border-radius:6px;background:var(--pine3);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:700;color:var(--gold)}
+  .step code{font-family:'JetBrains Mono',monospace;background:var(--pine3);padding:2px 7px;border-radius:5px;font-size:.85em;color:var(--moss);border:1px solid var(--line)}
+
+  /* Rules */
+  .rules{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:680px){.rules{grid-template-columns:1fr}}
+  .rule{
+    display:flex;gap:15px;align-items:flex-start;
+    background:var(--pine2);border:1px solid var(--line);border-radius:13px;padding:19px 20px;
+  }
+  .rule .rn{font-family:'Fraunces',serif;font-weight:900;font-size:1.4rem;color:var(--gold);line-height:1;min-width:26px}
+  .rule .rt{font-weight:600;font-size:1rem;margin-bottom:3px}
+  .rule .rd{font-size:.88rem;color:rgba(242,233,216,.68);line-height:1.5}
+
+  /* rule group headers + tags */
+  .rgroup{margin-bottom:34px}
+  .rgroup:last-of-type{margin-bottom:0}
+  .rgroup-head{display:flex;align-items:center;gap:11px;margin-bottom:16px}
+  .rgroup-head .ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--pine2);border:1px solid var(--line)}
+  .rgroup-head .ic svg{width:16px;height:16px}
+  .rgroup-head h3{font-family:'Fraunces',serif;font-weight:600;font-size:1.35rem}
+  .rgroup-head .ct{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:700;color:rgba(242,233,216,.4);margin-left:2px}
+  .tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:5px;margin-left:8px;vertical-align:middle;border:1px solid var(--line)}
+  .tag.game{color:var(--moss);background:rgba(111,191,115,.08)}
+  .tag.disc{color:#8aa2ff;background:rgba(138,162,255,.08)}
+  .tag.both{color:var(--gold);background:rgba(230,180,80,.08)}
+  .callout{background:rgba(200,114,75,.1);border:1px solid rgba(200,114,75,.3);border-radius:12px;padding:16px 20px;margin-bottom:30px;font-size:.92rem;color:rgba(242,233,216,.85)}
+  .callout b{color:var(--clay)}
+
+  .note{margin-top:22px;font-size:.82rem;color:rgba(242,233,216,.5);font-style:italic}
+
+  /* ---------- Footer ---------- */
+  footer{border-top:1px solid var(--line);padding:44px 0 60px;text-align:center}
+  footer .brand{justify-content:center;margin-bottom:14px}
+  footer p{font-size:.85rem;color:rgba(242,233,216,.5)}
+  footer .heart{color:var(--moss)}
+  .toast{
+    position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--moss);color:var(--pine3);font-weight:600;font-size:.9rem;
+    padding:11px 22px;border-radius:100px;box-shadow:var(--shadow);
+    opacity:0;pointer-events:none;transition:all .3s cubic-bezier(.2,.8,.2,1);z-index:50;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="cube"></span> Pure Vanilla</div>
+    <div class="navlinks">
+      <a href="#join">Join</a>
+      <a href="#rules">Rules</a>
+      <a href="#about">About</a>
+    </div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <span class="eyebrow"><span class="tick"></span> Java &amp; Bedrock · No resets</span>
+    <h1>Survival, kept <span class="ital">pure.</span></h1>
+    <p class="lede">The Pure Vanilla SMP. No mods, no plugins fighting the game, no pay-to-win — just an honest world that stays put. Bring a friend.</p>
+
+    <div class="join" id="joincard">
+      <div class="join-row">
+        <div class="join-ip">
+          <span class="lbl">Server address</span>
+          <span class="ip" id="serverip">purevanillasmp.xyz</span>
+        </div>
+        <button class="copybtn" id="copybtn" aria-label="Copy server IP">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+          Copy
+        </button>
+      </div>
+      <div class="join-foot">
+        <span class="badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--moss)" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+          Cracked / offline welcome
+        </span>
+        <span class="badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
+          Bedrock via Geyser
+        </span>
+      </div>
+    </div>
+
+    <!-- Live status -->
+    <div class="status" id="status">
+      <div class="stat">
+        <div class="k">Status</div>
+        <div class="v"><span class="dot load" id="sdot"></span><span id="sstate" style="font-size:1.3rem">Checking…</span></div>
+      </div>
+      <div class="stat">
+        <div class="k">Players online</div>
+        <div class="v"><span id="splayers">—</span><small id="smax"></small></div>
+      </div>
+      <div class="stat">
+        <div class="k">Version</div>
+        <div class="v" style="font-size:1.5rem"><span id="sver">—</span></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="divider"></div>
+
+<!-- JOIN -->
+<section id="join">
+  <div class="wrap">
+    <div class="sec-head"><span class="no">01</span><h2>How to join</h2></div>
+    <div class="steps">
+      <div class="step">
+        <h3><span class="pill">Java</span> Java Edition</h3>
+        <p>Any recent Java client works. If you're on a cracked launcher, that's fine here.</p>
+        <ol>
+          <li>Open Minecraft → <code>Multiplayer</code></li>
+          <li>Click <code>Add Server</code></li>
+          <li>Paste <code>purevanillasmp.xyz</code> as the address</li>
+          <li>Join and say hi in chat</li>
+        </ol>
+      </div>
+      <div class="step">
+        <h3><span class="pill b">Bedrock</span> Bedrock Edition</h3>
+        <p>Bedrock players come through Geyser. You'll need the address and port.</p>
+        <ol>
+          <li>Servers tab → <code>Add Server</code></li>
+          <li>Address: <code>purevanillasmp.xyz</code></li>
+          <li>Port: <code>14061</code></li>
+          <li>Save &amp; join</li>
+        </ol>
+      </div>
+    </div>
+    <p class="note">Tip: the <code>.xyz</code> address works whenever the server's awake. If it won't connect, it may be starting up — give it a minute and retry.</p>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- RULES -->
+<section id="rules">
+  <div class="wrap">
+    <div class="sec-head"><span class="no">02</span><h2>House rules</h2></div>
+
+    <div class="callout">
+      <b>Reporting:</b> Use <b>@🎫 support</b> and the <b>#👮‍♂️・reports</b> channel to report rule-breakers. Without proof or witnesses, staff can't do much — so screenshot or record it.
+    </div>
+
+    <!-- IN GAME -->
+    <div class="rgroup">
+      <div class="rgroup-head">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="var(--moss)" stroke-width="2"><path d="M3 11h18M6 15h.01M10 15h.01M8 13v4"/><rect x="2" y="6" width="20" height="12" rx="3"/></svg></span>
+        <h3>In-game rules</h3><span class="ct" id="gamecount"></span>
+      </div>
+      <div class="rules">
+        <div class="rule"><span class="rn">1</span><div><div class="rt">No cheating <span class="tag game">In&nbsp;Game</span></div><div class="rd">No X-ray, bad clients, ESP, etc. If the anticheat catches you 5+ times, that's a ban.</div></div></div>
+        <div class="rule"><span class="rn">2</span><div><div class="rt">No lag machines <span class="tag game">In&nbsp;Game</span></div><div class="rd">Nothing built to lag or crash the server.</div></div></div>
+        <div class="rule"><span class="rn">3</span><div><div class="rt">No duping <span class="tag game">In&nbsp;Game</span></div><div class="rd">If you find a dupe, report it in #👷‍♂️・suggestion-support or #👮‍♂️・reports.</div></div></div>
+        <div class="rule"><span class="rn">4</span><div><div class="rt">No AFK killing <span class="tag game">In&nbsp;Game</span></div><div class="rd">Only allowed if the player is AFK in a warp PvP zone. Waiting at their zone or logout spot is fine.</div></div></div>
+        <div class="rule"><span class="rn">5</span><div><div class="rt">No farm / new-player killing <span class="tag game">In&nbsp;Game</span></div><div class="rd">Don't kill new players, players collecting their kits, or people mid-farm.</div></div></div>
+        <div class="rule"><span class="rn">6</span><div><div class="rt">No killing at spawn <span class="tag game">In&nbsp;Game</span></div><div class="rd">No hitting or killing at spawn. Hitting someone 5+ times at spawn is a server warn.</div></div></div>
+        <div class="rule"><span class="rn">7</span><div><div class="rt">No stealing kits <span class="tag game">In&nbsp;Game</span></div><div class="rd">Don't take anyone else's kit. Ever.</div></div></div>
+        <div class="rule"><span class="rn">8</span><div><div class="rt">No combat logging / teleporting <span class="tag game">In&nbsp;Game</span></div><div class="rd">No /home, /spawn, /warp, /tp, /back, or logging out while in danger — a fight, a trap, etc.</div></div></div>
+        <div class="rule"><span class="rn">9</span><div><div class="rt">No escaping fights with elytra <span class="tag game">In&nbsp;Game</span></div><div class="rd">You can use an ely to fight, but not to escape a fight you're in.</div></div></div>
+        <div class="rule"><span class="rn">10</span><div><div class="rt">Contracts are binding <span class="tag game">In&nbsp;Game</span></div><div class="rd">A contract signed by both players can't be broken — not even by owners. Breaking one usually means a ban.</div></div></div>
+        <div class="rule"><span class="rn">11</span><div><div class="rt">No orbital cannons or arrow machines <span class="tag game">In&nbsp;Game</span></div><div class="rd">No orbital cannons or arrow-spam contraptions.</div></div></div>
+        <div class="rule"><span class="rn">12</span><div><div class="rt">No enderchesting the dragon egg <span class="tag game">In&nbsp;Game</span></div><div class="rd">The dragon egg stays out of your ender chest.</div></div></div>
+        <div class="rule"><span class="rn">13</span><div><div class="rt">Dragon egg fairness <span class="tag game">In&nbsp;Game</span></div><div class="rd">If you already hold an egg, you can't compete in a boss fight where the reward is another dragon egg — one player shouldn't hoard them all.</div></div></div>
+        <div class="rule"><span class="rn">14</span><div><div class="rt">No maps or minimaps <span class="tag game">In&nbsp;Game</span></div><div class="rd">No seed maps, no minimap/worldmap mods.</div></div></div>
+        <div class="rule"><span class="rn">15</span><div><div class="rt">Ask before Replay / Freecam <span class="tag game">In&nbsp;Game</span></div><div class="rd">No Replay Mod or freecam unless a mod allows it first.</div></div></div>
+        <div class="rule"><span class="rn">16</span><div><div class="rt">Don't target laggy players <span class="tag game">In&nbsp;Game</span></div><div class="rd">Don't kill players who lag a lot just for lagging. Exception: if they attacked you, found your base, or annoyed you.</div></div></div>
+        <div class="rule"><span class="rn">17</span><div><div class="rt">No impersonating <span class="tag game">In&nbsp;Game</span></div><div class="rd">Don't join on a staff / higher-rank / someone else's account claiming to be them.</div></div></div>
+        <div class="rule"><span class="rn">18</span><div><div class="rt">No TPA spamming <span class="tag game">In&nbsp;Game</span></div><div class="rd">Don't spam teleport requests.</div></div></div>
+      </div>
+    </div>
+
+    <!-- DISCORD -->
+    <div class="rgroup">
+      <div class="rgroup-head">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#8aa2ff" stroke-width="2"><path d="M7.5 7.2A16 16 0 0 1 16.5 7.2M6 17a12 12 0 0 0 12 0M8.5 14c-.8 0-1.5-.9-1.5-2s.7-2 1.5-2 1.5.9 1.5 2-.7 2-1.5 2Zm7 0c-.8 0-1.5-.9-1.5-2s.7-2 1.5-2 1.5.9 1.5 2-.7 2-1.5 2Z"/></svg></span>
+        <h3>Discord rules</h3><span class="ct" id="disccount"></span>
+      </div>
+      <div class="rules">
+        <div class="rule"><span class="rn">19</span><div><div class="rt">No spamming <span class="tag disc">Discord</span></div><div class="rd">No spamming in any chat, no spamming reactions, and no spamming the welcome message when someone joins.</div></div></div>
+        <div class="rule"><span class="rn">20</span><div><div class="rt">Use GIFs sparingly <span class="tag disc">Discord</span></div><div class="rd">One at a time if you must — not a hundred million.</div></div></div>
+        <div class="rule"><span class="rn">21</span><div><div class="rt">No tag spamming <span class="tag disc">Discord</span></div><div class="rd">Don't spam-ping staff, higher roles, or members — not in DMs either. Use @🎫 support. For a real emergency (a hacker, etc.) you can ping ~3 times max.</div></div></div>
+      </div>
+    </div>
+
+    <!-- BOTH -->
+    <div class="rgroup">
+      <div class="rgroup-head">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg></span>
+        <h3>Applies everywhere</h3><span class="ct" id="bothcount"></span>
+      </div>
+      <div class="rules">
+        <div class="rule"><span class="rn">22</span><div><div class="rt">Be respectful <span class="tag both">Both</span></div><div class="rd">Be respectful in every chat. If staff or a higher rank tells you to stop, stop.</div></div></div>
+        <div class="rule"><span class="rn">23</span><div><div class="rt">Keep it clean <span class="tag both">Both</span></div><div class="rd">No N-word, no R-slur, no parent/region/"dih" stuff. Keep everything PG.</div></div></div>
+        <div class="rule"><span class="rn">24</span><div><div class="rt">English in chat <span class="tag both">Both</span></div><div class="rd">Please keep chat in English.</div></div></div>
+        <div class="rule"><span class="rn">25</span><div><div class="rt">No bypassing punishments <span class="tag both">Both</span></div><div class="rd">No ban, mute, warn, or rule bypassing.</div></div></div>
+        <div class="rule"><span class="rn">26</span><div><div class="rt">No begging <span class="tag both">Both</span></div><div class="rd">Don't beg staff or higher roles for stuff — it leads to a warning every time.</div></div></div>
+        <div class="rule"><span class="rn">27</span><div><div class="rt">Respect time zones <span class="tag both">Both</span></div><div class="rd">Staff and players are in different time zones. If nobody's responding, just wait.</div></div></div>
+        <div class="rule"><span class="rn">28</span><div><div class="rt">Must be 10+ <span class="tag both">Both</span></div><div class="rd">You must be at least 10 years old to be on this server.</div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="wrap">
+    <div class="sec-head"><span class="no">03</span><h2>What this is</h2></div>
+    <p style="max-width:640px;font-size:1.05rem;color:rgba(242,233,216,.8)">
+      Pure Vanilla is a small, long-running survival world that doesn't get wiped. The point is the opposite of most servers — no economy plugins, no ranks you buy, no minigame hub. Just the base game, a shared map, and whatever your group decides to build. Java and Bedrock players share the same world through Geyser, so nobody gets left out.
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="brand"><span class="cube"></span> Pure Vanilla SMP</div>
+    <p>purevanillasmp.xyz · made by <span class="heart">Bany &amp; Tufe</span></p>
+  </div>
+</footer>
+
+<div class="toast" id="toast">Copied to clipboard</div>
+
+<script>
+  // ---- Copy IP ----
+  const IP = 'purevanillasmp.xyz';
+  const copybtn = document.getElementById('copybtn');
+  const toast = document.getElementById('toast');
+  function showToast(msg){toast.textContent=msg;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800);}
+  copybtn.addEventListener('click', async ()=>{
+    try{
+      await navigator.clipboard.writeText(IP);
+      copybtn.classList.add('done');
+      copybtn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg> Copied';
+      showToast('Server IP copied');
+      setTimeout(()=>{copybtn.classList.remove('done');copybtn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg> Copy';},2000);
+    }catch(e){ showToast('Press Ctrl+C to copy'); }
+  });
+
+  // ---- Live server status via mcsrvstat.us (public API) ----
+  // Queries the real mcsh backend so status reflects the actual server.
+  const HOST = 'thepurevanillasmp.mcsh.io';
+  const dot=document.getElementById('sdot'), state=document.getElementById('sstate'),
+        players=document.getElementById('splayers'), max=document.getElementById('smax'),
+        ver=document.getElementById('sver');
+
+  async function loadStatus(){
+    try{
+      const r = await fetch('https://api.mcsrvstat.us/3/'+HOST, {cache:'no-store'});
+      const d = await r.json();
+      if(d && d.online){
+        dot.className='dot on';
+        state.textContent='Online';
+        players.textContent = d.players ? d.players.online : 0;
+        max.textContent = d.players ? ' / '+d.players.max : '';
+        ver.textContent = d.version ? d.version.replace(/[^0-9.\-a-zA-Z ]/g,'').slice(0,14) : '—';
+      } else {
+        dot.className='dot off';
+        state.textContent='Sleeping';
+        players.textContent='0'; max.textContent='';
+        ver.textContent='—';
+      }
+    }catch(e){
+      dot.className='dot off';
+      state.textContent='Unknown';
+      players.textContent='—'; max.textContent=''; ver.textContent='—';
+    }
+  }
+  loadStatus();
+  setInterval(loadStatus, 60000); // refresh every minute
+</script>
+</body>
+</html>
